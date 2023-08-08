@@ -12,10 +12,8 @@ import (
 	"time"
 )
 
-var database *gorm.DB
-
 func Signup(c *gin.Context) {
-	database = db.GetDB()
+	database := db.GetDB()
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{
@@ -100,6 +98,7 @@ func Signup(c *gin.Context) {
 }
 
 func Signin(c *gin.Context) {
+	database := db.GetDB()
 	type SigninRequest struct {
 		Email    string `json:"email" validate:"required"`
 		Password string `json:"password" validate:"required"`
@@ -183,6 +182,7 @@ func Signout(c *gin.Context) {
 }
 
 func Profile(c *gin.Context) {
+	database := db.GetDB()
 	var user models.User
 	id := c.Param("id")
 
