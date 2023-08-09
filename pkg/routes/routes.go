@@ -6,11 +6,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Routes(app *gin.Engine) {
+func Routes(app *gin.Engine) *gin.Engine {
 	api := app.Group("api/v1")
 
 	//auth routes
-	userApi := api.Group("/users/auth")
+	userApi := api.Group("/users/auth") // -
 	{
 		userApi.POST("singup", middlewares.ValidateCredentialsMiddleware, controllers.Signup)
 		userApi.POST("singin", middlewares.ValidateCredentialsMiddleware, controllers.Signin)
@@ -38,7 +38,7 @@ func Routes(app *gin.Engine) {
 	// address routes
 	addressApi := api.Group("/address", middlewares.RequireAuthMiddleware)
 	{
-		addressApi.PUT("/update", controllers.UpdateAddress)
+		addressApi.PUT("/update/:id", controllers.UpdateAddress)
 	}
 
 	// order routes
@@ -56,4 +56,5 @@ func Routes(app *gin.Engine) {
 		adminApi.DELETE("/deleteUser/:id", controllers.DeleteUser)
 		adminApi.DELETE("/deleteUsers", controllers.DeleteAllUsers)
 	}
+	return app
 }

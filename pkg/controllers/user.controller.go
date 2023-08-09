@@ -12,13 +12,14 @@ import (
 	"time"
 )
 
+// /     /api/v1/users/auth/singup
 func Signup(c *gin.Context) {
-	database := db.GetDB()
+	session := db.GetDB().Session(&gorm.Session{})
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid user data for model binding",
+			"message": "Invalid user data for model binding 1",
 			"data":    err.Error(),
 		})
 		return
@@ -30,7 +31,7 @@ func Signup(c *gin.Context) {
 	}
 	if user.UserType == "ADMIN" {
 		var existingAdmin models.User
-		result := database.Where("user_type = ?", "ADMIN").First(&existingAdmin)
+		result := session.Where("user_type = ?", "ADMIN").First(&existingAdmin)
 		if result.Error == nil {
 			c.JSON(400, gin.H{
 				"status":  "error",
@@ -42,7 +43,7 @@ func Signup(c *gin.Context) {
 
 	// check if user already exists
 	var existingUser models.User
-	result := database.Where("email = ?", user.Email).First(&existingUser)
+	result := session.Where("email = ?", user.Email).First(&existingUser)
 	if result.Error == nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
@@ -63,7 +64,7 @@ func Signup(c *gin.Context) {
 		return
 	}
 	user.Password = hashedPassword
-	result = database.Create(&user)
+	result = session.Create(&user)
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -72,7 +73,7 @@ func Signup(c *gin.Context) {
 		})
 		return
 	}
-
+	session.Commit()
 	// sign jwt with user id and email
 	signedToken, err := utils.CreateToken(strconv.Itoa(int(user.ID)), user.Email, user.UserType)
 	if err != nil {
@@ -81,6 +82,7 @@ func Signup(c *gin.Context) {
 			"message": "Failed to create token",
 			"data":    err.Error(),
 		})
+		return
 	}
 	// add token to cookie session
 	cookie := http.Cookie{
@@ -97,13 +99,13 @@ func Signup(c *gin.Context) {
 	})
 }
 
+// /api/v1/users/auth/singin +
 func Signin(c *gin.Context) {
-	database := db.GetDB()
+	session := db.GetDB().Session(&gorm.Session{})
 	type SigninRequest struct {
 		Email    string `json:"email" validate:"required"`
 		Password string `json:"password" validate:"required"`
 	}
-	// parse request body
 	var req SigninRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
@@ -113,13 +115,11 @@ func Signin(c *gin.Context) {
 		})
 		return
 	}
-	// get email and password from request body
 	password := req.Password
 	email := req.Email
 
-	// check if user already exists
 	var existingUser models.User
-	result := database.Where("email = ?", email).First(&existingUser)
+	result := session.Where("email = ?", email).First(&existingUser)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
@@ -134,7 +134,6 @@ func Signin(c *gin.Context) {
 		}
 		return
 	}
-	// check if password is correct
 	if !utils.VerifyPassword(password, existingUser.Password) {
 		c.JSON(400, gin.H{
 			"status":  "error",
@@ -142,7 +141,6 @@ func Signin(c *gin.Context) {
 		})
 		return
 	}
-	// sign jwt with user id and email
 	signedToken, err := utils.CreateToken(strconv.Itoa(int(existingUser.ID)), existingUser.Email, existingUser.UserType)
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -161,11 +159,12 @@ func Signin(c *gin.Context) {
 	http.SetCookie(c.Writer, &cookie)
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User signed up successfully",
+		"message": "User signed in successfully",
 		"data":    existingUser,
 	})
 }
 
+// /api/v1/users/auth/singout
 func Signout(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
@@ -181,12 +180,20 @@ func Signout(c *gin.Context) {
 	})
 }
 
+// /api/v1/users/auth/profile
 func Profile(c *gin.Context) {
-	database := db.GetDB()
+	session := db.GetDB().Session(&gorm.Session{})
 	var user models.User
-	id := c.Param("id")
+	id, exists := c.Get("id")
+	if !exists {
+		c.JSON(401, gin.H{
+			"status":  "error",
+			"message": "User not authenticated",
+		})
+		return
+	}
 
-	result := database.First(&user, id)
+	result := session.Where("ID=?", id).First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{

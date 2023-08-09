@@ -4,34 +4,28 @@ import (
 	"Ecommerce/pkg/db"
 	"Ecommerce/pkg/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 	"time"
 )
 
+// /api/v1/admin/getUser/:id
 func GetUser(c *gin.Context) {
-	database := db.GetDB()
-	userType := c.Param("userType")
-	if userType == "" {
-		c.JSON(400, gin.H{
-			"status":  "error",
-			"message": "Invalid user data for model binding",
-			"data":    nil,
-		})
-		return
-	}
+	session := db.GetDB().Session(&gorm.Session{})
 	id := c.Param("id")
-	if id == "" {
-		c.JSON(400, gin.H{
+	ID, err := strconv.ParseInt(id, 0, 0)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid user id",
 		})
 		return
 	}
-	// find user by id
 	var user models.User
-	res := database.First(&user, id)
+	res := session.Where("ID=?", ID).First(&user)
 	if res.Error != nil {
-		c.JSON(400, gin.H{
+		c.JSON(404, gin.H{
 			"status":  "error",
 			"message": "User not found",
 		})
@@ -44,18 +38,11 @@ func GetUser(c *gin.Context) {
 	})
 }
 
+// /api/v1/admin/getUsers
 func GetUsers(c *gin.Context) {
-	database := db.GetDB()
-	userType := c.Param("userType")
-	if userType == "" {
-		c.JSON(400, gin.H{
-			"status":  "error",
-			"message": "Invalid user data for model binding",
-			"data":    nil,
-		})
-		return
-	}
-	if userType != "ADMIN" {
+	session := db.GetDB().Session(&gorm.Session{})
+	userType, ok := c.Get("userType")
+	if !ok || userType != "ADMIN" {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -63,9 +50,8 @@ func GetUsers(c *gin.Context) {
 		})
 		return
 	}
-
 	var users []models.User
-	res := database.Find(&users)
+	res := session.Find(&users)
 	if res.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -89,18 +75,11 @@ func GetUsers(c *gin.Context) {
 	})
 }
 
+// /api/v1/admin/deleteUser/:id
 func DeleteUser(c *gin.Context) {
-	database := db.GetDB()
-	userType := c.Param("userType")
-	if userType == "" {
-		c.JSON(400, gin.H{
-			"status":  "error",
-			"message": "Invalid user data for model binding",
-			"data":    nil,
-		})
-		return
-	}
-	if userType != "ADMIN" {
+	session := db.GetDB().Session(&gorm.Session{})
+	userType, ok := c.Get("userType")
+	if !ok || userType != "ADMIN" {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -117,7 +96,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	var user models.User
-	res := database.Where("ID=?", id).Delete(&user)
+	res := session.Where("ID=?", id).Delete(&user)
 	if res.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -127,7 +106,6 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	if user.UserType == "ADMIN" {
-		// delete cookie
 		cookie := http.Cookie{
 			Name:     "jwt",
 			Value:    "",
@@ -149,18 +127,11 @@ func DeleteUser(c *gin.Context) {
 	}
 }
 
+// /api/v1/admin/deleteUsers
 func DeleteAllUsers(c *gin.Context) {
-	database := db.GetDB()
-	userType := c.Param("userType")
-	if userType == "" {
-		c.JSON(400, gin.H{
-			"status":  "error",
-			"message": "Invalid user data for model binding",
-			"data":    nil,
-		})
-		return
-	}
-	if userType != "ADMIN" {
+	session := db.GetDB().Session(&gorm.Session{})
+	userType, ok := c.Get("userType")
+	if !ok || userType != "ADMIN" {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -169,8 +140,7 @@ func DeleteAllUsers(c *gin.Context) {
 		return
 	}
 	var users []models.User
-
-	result := database.Find(&users)
+	result := session.Find(&users)
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -187,7 +157,7 @@ func DeleteAllUsers(c *gin.Context) {
 		})
 		return
 	}
-	deleteResult := database.Delete(&users)
+	deleteResult := session.Delete(&users)
 	if deleteResult.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -196,6 +166,7 @@ func DeleteAllUsers(c *gin.Context) {
 		})
 		return
 	}
+	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "Users deleted",

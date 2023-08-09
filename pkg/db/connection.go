@@ -2,7 +2,6 @@ package db
 
 import (
 	"Ecommerce/pkg/config"
-	"Ecommerce/pkg/models"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -16,14 +15,15 @@ func ConnectDB(cfg config.Config) {
 	d, dbErr := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		SkipDefaultTransaction: true,
 	})
-	db = d
-	if dbErr != nil {
+	sqldb, err := d.DB()
+	if err != nil {
 		log.Fatal(dbErr)
 	}
-	err := db.AutoMigrate(&models.User{}, &models.Address{}, &models.ProductsToOrder{}, &models.Order{}, &models.Product{})
-	if err != nil {
-		log.Fatal(err)
-	}
+	maxIdleConns := 10
+	maxOpenConns := 100
+	sqldb.SetMaxIdleConns(maxIdleConns)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	db = d
 }
 
 func GetDB() *gorm.DB {

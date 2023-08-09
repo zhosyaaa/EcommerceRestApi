@@ -4,16 +4,15 @@ import (
 	"Ecommerce/pkg/db"
 	"Ecommerce/pkg/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"net/http"
 )
 
-///по любому не правильные
-
+// /api/v1/cart/remove/:id
 func RemoveProductFromCart(c *gin.Context) {
 	type Request struct {
 		Count int `json:"count" binding:"required"`
 	}
-
-	// parse req body
 	var req Request
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
@@ -23,8 +22,6 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-
-	// get product id from params and user id from context
 	productId := c.Param("id")
 	if productId == "" {
 		c.JSON(400, gin.H{
@@ -34,9 +31,17 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-
+	userID, ok := c.Get("user_id") // _id
+	if !ok {
+		c.JSON(400, gin.H{
+			"status":  "error",
+			"message": "User ID not found in context",
+		})
+		return
+	}
+	session := db.GetDB().Session(&gorm.Session{})
 	var product models.Product
-	res := db.GetDB().Where("ID=?", productId).Find(&product)
+	res := session.Where("ID=?", productId).Find(&product) // or first
 	if res.Error != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
@@ -45,16 +50,8 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-	idLocal, ok := c.Get("user_id")
-	if !ok {
-		c.JSON(400, gin.H{
-			"status":  "error",
-			"message": "User ID not found in context",
-		})
-		return
-	}
 	var user models.User
-	result := db.GetDB().Where("ID = ?", idLocal).Preload("UserCart").Find(&user)
+	result := session.Where("ID = ?", userID).Preload("UserCart").Find(&user) // or first
 	if result.Error != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
@@ -63,9 +60,10 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
+
 	var found bool
 	for i, item := range user.UserCart {
-		if string(item.ID) == productId {
+		if string(item.ProductId) == productId {
 			if user.UserCart[i].BuyQuantity >= req.Count {
 				user.UserCart[i].BuyQuantity -= req.Count
 			} else {
@@ -83,7 +81,7 @@ func RemoveProductFromCart(c *gin.Context) {
 		return
 	}
 
-	if err := db.GetDB().Save(&user).Error; err != nil {
+	if err := session.Save(&user).Error; err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Failed to update user cart",
@@ -98,104 +96,108 @@ func RemoveProductFromCart(c *gin.Context) {
 	})
 }
 
+// /api/v1/cart/add/:id
 func AddProductToCart(c *gin.Context) {
-	idUser, ok := c.Get("id")
+	session := db.GetDB().Session(&gorm.Session{})
+	idUser, ok := c.Get("user_id")
 	if !ok {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User ID not found in context",
 		})
 		return
 	}
-	idProduct := c.Param("id")
-	if idProduct == "" {
-		c.JSON(400, gin.H{
+	userID, ok := idUser.(uint)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid product id",
+			"message": "Invalid user ID type",
 		})
 		return
 	}
-	// find product by id
+	idProduct := c.Param("id")
+	if idProduct == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Invalid product ID",
+		})
+		return
+	}
+
 	var product models.Product
-	res := db.GetDB().Where("ID=?", idProduct).Find(&product)
+	res := session.Where("ID=?", idProduct).Find(&product)
 	if res.Error != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Product not found",
 			"data":    res.Error,
 		})
 		return
 	}
-	// check if product is available
 	if product.AvailableQuantity == 0 {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Product is not available",
 		})
 		return
 	}
-	// fetch UserCart from user
 	var user models.User
-	result := db.GetDB().Where("ID = ?", idUser).Preload("UserCart").Find(&user)
+	result := session.Where("ID = ?", userID).Preload("UserCart").Find(&user)
 	if result.Error != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User with such an ID was not found",
 			"data":    result.Error,
 		})
 		return
 	}
-	// parse req body
 	var productToOrder models.ProductsToOrder
 	if err := c.ShouldBindJSON(&productToOrder); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
 			"data":    err.Error(),
 		})
 		return
 	}
-	// user quantity must be less than product quantity
 	if productToOrder.BuyQuantity > product.AvailableQuantity {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Quantity must be less than product quantity",
-			"data":    nil,
 		})
 		return
 	}
-	var existingCartItem models.ProductsToOrder
 	existingIndex := -1
+	var existingCartItem models.ProductsToOrder
 	for i, item := range user.UserCart {
-		if string(item.ID) == idProduct {
+		if item.ProductId == product.ID {
 			existingCartItem = item
 			existingIndex = i
 			break
 		}
 	}
-
-	if existingIndex != -1 {
-		user.UserCart[existingIndex].BuyQuantity += productToOrder.BuyQuantity
-	} else {
-		// Add the product to the user's cart
-		productToOrder.Name = product.Name
-		productToOrder.Price = product.Price
-		productToOrder.ID = product.ID // Assuming you have a ProductID field
-		user.UserCart = append(user.UserCart, productToOrder)
-	}
-
-	// Save the updated user cart
-	if err := db.GetDB().Save(&user).Error; err != nil {
-		c.JSON(500, gin.H{
+	updateCart(&user, product, productToOrder, existingCartItem, existingIndex)
+	if err := session.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to update user cart",
 			"data":    err,
 		})
 		return
 	}
-
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Product added to cart successfully",
 	})
+}
+
+func updateCart(user *models.User, product models.Product, productToOrder models.ProductsToOrder, existingCartItem models.ProductsToOrder, existingIndex int) {
+	if existingIndex != -1 {
+		user.UserCart[existingIndex].BuyQuantity += productToOrder.BuyQuantity
+	} else {
+		productToOrder.Name = product.Name
+		productToOrder.Price = product.Price
+		productToOrder.ProductId = product.ID
+		user.UserCart = append(user.UserCart, productToOrder)
+	}
 }
