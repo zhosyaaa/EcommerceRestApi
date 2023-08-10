@@ -17,7 +17,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid request body",
+			"message": "Invalid request body RemoveProductFromCart",
 			"data":    err,
 		})
 		return
@@ -26,7 +26,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if productId == "" {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid product id",
+			"message": "Invalid product id RemoveProductFromCart",
 			"data":    nil,
 		})
 		return
@@ -35,7 +35,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if !ok {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "User ID not found in context",
+			"message": "User ID not found in context RemoveProductFromCart",
 		})
 		return
 	}
@@ -45,7 +45,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if res.Error != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Product with such an ID was not found",
+			"message": "Product with such an ID was not found RemoveProductFromCart",
 			"data":    res.Error,
 		})
 		return
@@ -55,7 +55,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "User with such an ID was not found",
+			"message": "User with such an ID was not found RemoveProductFromCart",
 			"data":    result.Error,
 		})
 		return
@@ -76,7 +76,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if !found {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Product not found in cart",
+			"message": "Product not found in cart RemoveProductFromCart",
 		})
 		return
 	}
@@ -84,7 +84,7 @@ func RemoveProductFromCart(c *gin.Context) {
 	if err := session.Save(&user).Error; err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to update user cart",
+			"message": "Failed to update user cart RemoveProductFromCart",
 			"data":    err,
 		})
 		return
@@ -92,7 +92,7 @@ func RemoveProductFromCart(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Product removed from cart successfully",
+		"message": "Product removed from cart successfully RemoveProductFromCart",
 	})
 }
 
@@ -103,7 +103,7 @@ func AddProductToCart(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "User ID not found in context",
+			"message": "User ID not found in context AddProductToCart",
 		})
 		return
 	}
@@ -111,7 +111,7 @@ func AddProductToCart(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid user ID type",
+			"message": "Invalid user ID type AddProductToCart",
 		})
 		return
 	}
@@ -119,7 +119,7 @@ func AddProductToCart(c *gin.Context) {
 	if idProduct == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid product ID",
+			"message": "Invalid product ID AddProductToCart",
 		})
 		return
 	}
@@ -129,7 +129,7 @@ func AddProductToCart(c *gin.Context) {
 	if res.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Product not found",
+			"message": "Product not found AddProductToCart",
 			"data":    res.Error,
 		})
 		return
@@ -137,7 +137,7 @@ func AddProductToCart(c *gin.Context) {
 	if product.AvailableQuantity == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Product is not available",
+			"message": "Product is not available AddProductToCart",
 		})
 		return
 	}
@@ -146,7 +146,7 @@ func AddProductToCart(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "User with such an ID was not found",
+			"message": "User with such an ID was not found AddProductToCart",
 			"data":    result.Error,
 		})
 		return
@@ -155,7 +155,7 @@ func AddProductToCart(c *gin.Context) {
 	if err := c.ShouldBindJSON(&productToOrder); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid request body",
+			"message": "Invalid request body AddProductToCart",
 			"data":    err.Error(),
 		})
 		return
@@ -163,7 +163,7 @@ func AddProductToCart(c *gin.Context) {
 	if productToOrder.BuyQuantity > product.AvailableQuantity {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Quantity must be less than product quantity",
+			"message": "Quantity must be less than product quantity AddProductToCart",
 		})
 		return
 	}
@@ -180,14 +180,14 @@ func AddProductToCart(c *gin.Context) {
 	if err := session.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Failed to update user cart",
+			"message": "Failed to update user cart AddProductToCart",
 			"data":    err,
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "Product added to cart successfully",
+		"message": "Product added to cart successfully AddProductToCart",
 	})
 }
 

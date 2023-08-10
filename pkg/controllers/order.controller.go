@@ -16,12 +16,12 @@ func OrderAll(c *gin.Context) {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
-				"message": "User does not exist",
+				"message": "User does not exist OrderAll",
 			})
 		} else {
 			c.JSON(500, gin.H{
 				"status":  "error",
-				"message": "Internal server error",
+				"message": "Internal server error OrderAll",
 			})
 		}
 		return
@@ -31,14 +31,14 @@ func OrderAll(c *gin.Context) {
 	if len(userCart) == 0 {
 		c.JSON(404, gin.H{
 			"status":  "error",
-			"message": "User cart is empty",
+			"message": "User cart is empty OrderAll",
 		})
 		return
 	}
 
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User cart retrieved successfully",
+		"message": "User cart retrieved successfully OrderAll32 OrderAll",
 		"data":    userCart,
 	})
 }
@@ -52,12 +52,12 @@ func OrderOne(c *gin.Context) {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
-				"message": "User does not exist",
+				"message": "User does not exist OrderOne",
 			})
 		} else {
 			c.JSON(500, gin.H{
 				"status":  "error",
-				"message": "Internal server error",
+				"message": "Internal server error OrderOne",
 			})
 		}
 		return
@@ -76,7 +76,7 @@ func OrderOne(c *gin.Context) {
 	if productToOrder.ProductId == 0 {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Order does not exist",
+			"message": "Order does not exist OrderOne",
 		})
 		return
 	}
@@ -85,13 +85,13 @@ func OrderOne(c *gin.Context) {
 	if updateResult.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to update user's cart",
+			"message": "Failed to update user's cart OrderOne",
 			"data":    updateResult.Error,
 		})
 		return
 	}
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Order removed from cart successfully",
+		"message": "Order removed from cart successfully OrderOne",
 	})
 }

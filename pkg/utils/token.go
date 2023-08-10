@@ -14,16 +14,16 @@ type Claims struct {
 	UserType string `json:"userType"`
 }
 
-func CreateToken(id string, email string, userType string) (tokenString string, err error) {
+func CreateToken(id int, email string, userType string) (tokenString string, err error) {
 	claims := &Claims{
-		id:       id,
+		id:       string(id),
 		Email:    email,
 		UserType: userType,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	if signedToken, err := token.SignedString([]byte(os.Getenv("JWT_SECRET"))); err != nil {
 		return "", err
 	} else {

@@ -134,7 +134,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if !ok || userType != "ADMIN" {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Only admin can get users",
+			"message": "Only admin can get users DeleteAllUsers",
 			"data":    nil,
 		})
 		return
@@ -144,7 +144,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error getting users",
+			"message": "Error getting users DeleteAllUsers",
 			"data":    nil,
 		})
 		return
@@ -152,7 +152,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if len(users) == 0 {
 		c.JSON(404, gin.H{
 			"status":  "error",
-			"message": "No users found for deletion",
+			"message": "No users found for deletion DeleteAllUsers",
 			"data":    nil,
 		})
 		return
@@ -161,7 +161,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if deleteResult.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error deleting users",
+			"message": "Error deleting users DeleteAllUsers",
 			"data":    nil,
 		})
 		return
@@ -169,7 +169,7 @@ func DeleteAllUsers(c *gin.Context) {
 	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Users deleted",
+		"message": "Users deleted DeleteAllUsers",
 		"data":    nil,
 	})
 }

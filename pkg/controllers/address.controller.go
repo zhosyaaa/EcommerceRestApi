@@ -15,7 +15,7 @@ func UpdateAddress(c *gin.Context) {
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid address data",
+			"message": "Invalid address data UpdateAddress",
 			"data":    err.Error(),
 		})
 		return
@@ -24,7 +24,7 @@ func UpdateAddress(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error updating address",
+			"message": "Error updating address UpdateAddress",
 			"data":    nil,
 		})
 		return
@@ -32,7 +32,7 @@ func UpdateAddress(c *gin.Context) {
 	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Address updated",
+		"message": "Address updated UpdateAddress",
 		"data":    user,
 	})
 }

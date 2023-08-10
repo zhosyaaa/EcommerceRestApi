@@ -54,21 +54,21 @@ func GetAllProducts(c *gin.Context) {
 	if err := session.Find(&products).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Error getting products",
+			"message": "Error getting products GetAllProducts",
 		})
 		return
 	}
 	if len(products) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
-			"message": "No products found",
+			"message": "No products found GetAllProducts",
 			"data":    nil,
 		})
 		return
 	}
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Users found",
+		"message": "Users found GetAllProducts",
 		"data":    products,
 	})
 }
@@ -82,19 +82,19 @@ func GetProduct(c *gin.Context) {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
-				"message": "Product not found",
+				"message": "Product not found GetProduct",
 			})
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status":  "error",
-				"message": "Error getting product",
+				"message": "Error getting product GetProduct",
 			})
 		}
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "Product found",
+		"message": "Product found GetProduct",
 		"data":    product,
 	})
 }
@@ -106,7 +106,7 @@ func UpdateProduct(c *gin.Context) {
 	if !ok || userType != "ADMIN" {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
-			"message": "Only admin can update products",
+			"message": "Only admin can update products UpdateProduct",
 			"data":    nil,
 		})
 		return
@@ -115,7 +115,7 @@ func UpdateProduct(c *gin.Context) {
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid product id",
+			"message": "Invalid product id UpdateProduct",
 		})
 		return
 	}
@@ -123,7 +123,7 @@ func UpdateProduct(c *gin.Context) {
 	if err := c.ShouldBindJSON(&product); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid product data",
+			"message": "Invalid product data UpdateProduct",
 			"data":    err.Error(),
 		})
 		return
@@ -132,14 +132,14 @@ func UpdateProduct(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Error updating product",
+			"message": "Error updating product UpdateProduct",
 			"data":    nil,
 		})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
-		"message": "Product updated",
+		"message": "Product updated UpdateProduct",
 		"data":    product,
 	})
 }
@@ -151,7 +151,7 @@ func DeleteProduct(c *gin.Context) {
 	if !ok || userType != "ADMIN" {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
-			"message": "Only admin can delete products",
+			"message": "Only admin can delete products DeleteProduct",
 		})
 		return
 	}
@@ -159,7 +159,7 @@ func DeleteProduct(c *gin.Context) {
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid product id",
+			"message": "Invalid product id DeleteProduct",
 		})
 		return
 	}
@@ -169,13 +169,13 @@ func DeleteProduct(c *gin.Context) {
 		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
-				"message": "Product not found",
+				"message": "Product not found DeleteProduct",
 			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Error finding product",
+			"message": "Error finding product DeleteProduct",
 		})
 		return
 	}
@@ -183,12 +183,12 @@ func DeleteProduct(c *gin.Context) {
 	if deleteResult.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Error deleting product",
+			"message": "Error deleting product DeleteProduct",
 		})
 		return
 	}
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Product deleted successfully",
+		"message": "Product deleted successfully DeleteProduct",
 	})
 }

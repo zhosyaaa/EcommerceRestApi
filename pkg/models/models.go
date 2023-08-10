@@ -5,14 +5,16 @@ import (
 )
 
 type User struct {
-	ID       int               `json:"ID" gorm:"primarykey"`
-	Username string            `json:"username" `
-	Email    string            `json:"email" `
-	Password string            `json:"password"`
-	UserType string            `json:"userType"`
-	Address  Address           `json:"address"`
-	Orders   []Order           `json:"orders" `
-	UserCart []ProductsToOrder `json:"userCart" `
+	ID        int               `json:"ID" gorm:"primarykey"`
+	Username  string            `json:"username" `
+	Email     string            `json:"email" `
+	Password  string            `json:"password"`
+	UserType  string            `json:"userType"`
+	CreatedAt time.Time         `json:"createdAt"`
+	UpdatedAt time.Time         `json:"updatedAt"`
+	Address   Address           `json:"address" gorm:"foreignKey:ID"`
+	Orders    []Order           `json:"orders" gorm:"foreignKey:Id"`
+	UserCart  []ProductsToOrder `json:"userCart" gorm:"foreignKey:ProductId"`
 }
 
 type Product struct {
@@ -29,9 +31,10 @@ type Product struct {
 
 type Order struct {
 	Id         int               `json:"_id,omitempty" gorm:"primarykey"`
-	OrderCart  []ProductsToOrder `json:"orderCart,omitempty"`
+	OrderCart  []ProductsToOrder `json:"orderCart,omitempty" gorm:"foreignKey:ProductId"`
 	TotalPrice float64           `json:"totalPrice,omitempty"`
 	CreatedAt  time.Time         `json:"createdAt,omitempty"`
+	AddressID  int               `json:"addressID" gorm:"foreignKey:AddressID"`
 }
 
 type ProductsToOrder struct {
@@ -44,6 +47,7 @@ type ProductsToOrder struct {
 }
 
 type Address struct {
+	ID          int    `json:"id" gorm:"primarykey"`
 	ZipCode     string `json:"zipCode,omitempty"`
 	City        string `json:"city,omitempty"`
 	State       string `json:"state,omitempty"`
