@@ -5,6 +5,7 @@ import (
 	"Ecommerce/pkg/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"strconv"
 )
 
 // /api/v1/order/
@@ -67,13 +68,13 @@ func OrderOne(c *gin.Context) {
 	var productToOrder models.ProductsToOrder
 	var cartIndex int
 	for i, item := range user.UserCart {
-		if string(item.ProductId) == id {
+		if strconv.Itoa(int(item.ID)) == id {
 			productToOrder = item
 			cartIndex = i
 			break
 		}
 	}
-	if productToOrder.ProductId == 0 {
+	if productToOrder.ID == 0 {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Order does not exist OrderOne",

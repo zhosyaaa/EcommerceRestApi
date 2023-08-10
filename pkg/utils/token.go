@@ -2,21 +2,22 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"os"
 	"time"
 )
 
 type Claims struct {
-	id    string `json:"id"`
+	Id    string `json:"id"`
 	Email string `json:"email"`
 	jwt.StandardClaims
 	UserType string `json:"userType"`
 }
 
-func CreateToken(id int, email string, userType string) (tokenString string, err error) {
+func CreateToken(id uint, email string, userType string) (tokenString string, err error) {
 	claims := &Claims{
-		id:       string(id),
+		Id:       string(id),
 		Email:    email,
 		UserType: userType,
 		StandardClaims: jwt.StandardClaims{
@@ -51,5 +52,6 @@ func VerifyToken(token string) (string, string, string, error) {
 	if claims == nil {
 		return "", "", "", errors.New("token claims are nil")
 	}
+	fmt.Println(claims.Id, claims.Email, claims.UserType)
 	return claims.Id, claims.Email, claims.UserType, nil
 }

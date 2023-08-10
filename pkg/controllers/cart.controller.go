@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 // /api/v1/cart/remove/:id
@@ -63,7 +64,7 @@ func RemoveProductFromCart(c *gin.Context) {
 
 	var found bool
 	for i, item := range user.UserCart {
-		if string(item.ProductId) == productId {
+		if strconv.Itoa(int(item.ID)) == productId {
 			if user.UserCart[i].BuyQuantity >= req.Count {
 				user.UserCart[i].BuyQuantity -= req.Count
 			} else {
@@ -170,7 +171,7 @@ func AddProductToCart(c *gin.Context) {
 	existingIndex := -1
 	var existingCartItem models.ProductsToOrder
 	for i, item := range user.UserCart {
-		if item.ProductId == product.ID {
+		if item.ID == product.ID {
 			existingCartItem = item
 			existingIndex = i
 			break
@@ -197,7 +198,7 @@ func updateCart(user *models.User, product models.Product, productToOrder models
 	} else {
 		productToOrder.Name = product.Name
 		productToOrder.Price = product.Price
-		productToOrder.ProductId = product.ID
+		productToOrder.ID = product.ID
 		user.UserCart = append(user.UserCart, productToOrder)
 	}
 }
