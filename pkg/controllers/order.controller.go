@@ -10,19 +10,19 @@ import (
 
 // /api/v1/order/
 func OrderAll(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID, _ := c.Get("id")
 	var user models.User
-	result := db.GetDB().Preload("UserCart").Where("ID=?", userID).First(&user)
+	result := db.GetDB().Where("ID=?", userID).Preload("UserCart").First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
-				"message": "User does not exist OrderAll",
+				"message": "User does not exist",
 			})
 		} else {
 			c.JSON(500, gin.H{
 				"status":  "error",
-				"message": "Internal server error OrderAll",
+				"message": "Internal server error ",
 			})
 		}
 		return
@@ -32,33 +32,34 @@ func OrderAll(c *gin.Context) {
 	if len(userCart) == 0 {
 		c.JSON(404, gin.H{
 			"status":  "error",
-			"message": "User cart is empty OrderAll",
+			"message": "User cart is empty",
 		})
 		return
 	}
 
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User cart retrieved successfully OrderAll32 OrderAll",
+		"message": "User cart retrieved successfully",
 		"data":    userCart,
 	})
 }
 
-// /api/v1/order/:id
+// /api/v1/order/:id +
 func OrderOne(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	session := db.GetDB().Session(&gorm.Session{})
+	userID, _ := c.Get("id")
 	var user models.User
-	result := db.GetDB().Preload("UserCart").Where("ID=?", userID).First(&user)
+	result := session.Where("ID=?", userID).Preload("UserCart").First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
-				"message": "User does not exist OrderOne",
+				"message": "User does not exist",
 			})
 		} else {
 			c.JSON(500, gin.H{
 				"status":  "error",
-				"message": "Internal server error OrderOne",
+				"message": "Internal server error",
 			})
 		}
 		return
@@ -77,22 +78,35 @@ func OrderOne(c *gin.Context) {
 	if productToOrder.ID == 0 {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Order does not exist OrderOne",
+			"message": "Order does not exist",
 		})
 		return
 	}
-	user.UserCart = append(user.UserCart[:cartIndex], user.UserCart[cartIndex+1:]...)
-	updateResult := db.GetDB().Save(&user)
+	var usercart []models.ProductsToOrder
+	usercart = append(user.UserCart[:cartIndex], user.UserCart[cartIndex+1:]...)
+	user.UserCart = usercart
+	updateResult := session.Save(&user)
 	if updateResult.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to update user's cart OrderOne",
+			"message": "Failed to update user's cart",
 			"data":    updateResult.Error,
 		})
 		return
 	}
+
+	updateResult = session.Delete(&productToOrder)
+	if updateResult.Error != nil {
+		c.JSON(500, gin.H{
+			"status":  "error",
+			"message": "Failed to deleted productToOrder",
+			"data":    updateResult.Error,
+		})
+		return
+	}
+	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Order removed from cart successfully OrderOne",
+		"message": "Order removed from cart successfully ",
 	})
 }

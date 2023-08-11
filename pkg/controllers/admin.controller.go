@@ -23,7 +23,7 @@ func GetUser(c *gin.Context) {
 		return
 	}
 	var user models.User
-	res := session.Where("ID=?", ID).First(&user)
+	res := session.Where("ID=?", ID).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
 	if res.Error != nil {
 		c.JSON(404, gin.H{
 			"status":  "error",
@@ -51,7 +51,7 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 	var users []models.User
-	res := session.Find(&users)
+	res := session.Preload("Address").Preload("UserCart").Preload("Orders").Find(&users)
 	if res.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
@@ -134,7 +134,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if !ok || userType != "ADMIN" {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Only admin can get users DeleteAllUsers",
+			"message": "Only admin can get users",
 			"data":    nil,
 		})
 		return
@@ -144,7 +144,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error getting users DeleteAllUsers",
+			"message": "Error getting users",
 			"data":    nil,
 		})
 		return
@@ -152,7 +152,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if len(users) == 0 {
 		c.JSON(404, gin.H{
 			"status":  "error",
-			"message": "No users found for deletion DeleteAllUsers",
+			"message": "No users found for deletion",
 			"data":    nil,
 		})
 		return
@@ -161,7 +161,7 @@ func DeleteAllUsers(c *gin.Context) {
 	if deleteResult.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error deleting users DeleteAllUsers",
+			"message": "Error deleting users",
 			"data":    nil,
 		})
 		return
@@ -169,7 +169,7 @@ func DeleteAllUsers(c *gin.Context) {
 	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Users deleted DeleteAllUsers",
+		"message": "Users deleted",
 		"data":    nil,
 	})
 }

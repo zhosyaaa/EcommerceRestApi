@@ -2,7 +2,6 @@ package models
 
 import (
 	"gorm.io/gorm"
-	"time"
 )
 
 type User struct {
@@ -30,8 +29,7 @@ type Order struct {
 	gorm.Model
 	OrderCart  []ProductsToOrder `json:"orderCart,omitempty" gorm:"foreignKey:ID"`
 	TotalPrice float64           `json:"totalPrice,omitempty"`
-	CreatedAt  time.Time         `json:"createdAt,omitempty"`
-	AddressID  int               `json:"addressID" gorm:"foreignKey:ID"`
+	AddressID  uint              `json:"addressID" gorm:"foreignKey:ID"`
 }
 
 type ProductsToOrder struct {

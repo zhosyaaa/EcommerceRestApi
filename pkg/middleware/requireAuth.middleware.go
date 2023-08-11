@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"Ecommerce/pkg/utils"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -36,7 +35,6 @@ func RequireAuthMiddleware(c *gin.Context) {
 		return
 
 	}
-	fmt.Println(id, email, userType, "in middleware")
 	c.Set("id", id)
 	c.Set("email", email)
 	c.Set("userType", userType)

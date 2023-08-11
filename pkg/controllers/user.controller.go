@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func Signup(c *gin.Context) {
 	if err := c.ShouldBindJSON(&userBind); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid user data for model binding Signup",
+			"message": "Invalid user data for model binding",
 			"data":    err.Error(),
 		})
 		return
@@ -59,7 +60,6 @@ func Signup(c *gin.Context) {
 	user.Username = userBind.Username
 	user.Password = userBind.Password
 
-	///для чтения с енв файла
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -75,7 +75,7 @@ func Signup(c *gin.Context) {
 		if result.Error == nil {
 			c.JSON(400, gin.H{
 				"status":  "error",
-				"message": "Admin user already exists Signup",
+				"message": "Admin user already exists",
 				"data":    result.Error,
 			})
 		}
@@ -86,7 +86,7 @@ func Signup(c *gin.Context) {
 	if result.Error == nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "User already exists Signup",
+			"message": "User already exists",
 			"data":    result,
 		})
 		return
@@ -96,7 +96,7 @@ func Signup(c *gin.Context) {
 	if err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to hash the password Signup",
+			"message": "Failed to hash the password",
 			"data":    err.Error(),
 		})
 		return
@@ -107,18 +107,18 @@ func Signup(c *gin.Context) {
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to insert a user Signup",
+			"message": "Failed to insert a user",
 			"data":    result.Error.Error(),
 		})
 		return
 	}
 	session.Commit()
 
-	signedToken, err := utils.CreateToken(user.ID, user.Email, user.UserType)
+	signedToken, err := utils.CreateToken(strconv.Itoa(int(user.ID)), user.Email, user.UserType)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to create token Signup",
+			"message": "Failed to create token ",
 			"data":    err.Error(),
 		})
 		return
@@ -127,13 +127,14 @@ func Signup(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
+		Path:     "/api/v1",
 		Expires:  time.Now().Add(time.Hour * 24),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User signed up successfully Signup",
+		"message": "User signed up successfully",
 		"data":    signedToken,
 	})
 }
@@ -152,7 +153,7 @@ func Signin(c *gin.Context) {
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid request body Signin",
+			"message": "Invalid request body",
 			"data":    err.Error(),
 		})
 		return
@@ -165,22 +166,21 @@ func Signin(c *gin.Context) {
 		})
 		return
 	}
-	//username := req.Username
 	password := req.Password
 	email := req.Email
 
 	var existingUser models.User
-	result := session.Where("email = ?", email).First(&existingUser)
+	result := session.Where("email = ?", email).Preload("Address").Preload("UserCart").Preload("Orders").First(&existingUser)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
-				"message": "User does not exist Signin",
+				"message": "User does not exist",
 			})
 		} else {
 			c.JSON(500, gin.H{
 				"status":  "error",
-				"message": "Internal server error Signin",
+				"message": "Internal server error",
 			})
 		}
 		return
@@ -188,30 +188,30 @@ func Signin(c *gin.Context) {
 	if !utils.VerifyPassword(password, existingUser.Password) {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid credentials Signin",
+			"message": "Invalid credentials",
 		})
 		return
 	}
 
-	signedToken, err := utils.CreateToken(existingUser.ID, existingUser.Email, existingUser.UserType)
+	signedToken, err := utils.CreateToken(strconv.Itoa(int(existingUser.ID)), existingUser.Email, existingUser.UserType)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Failed to create token Signin",
+			"message": "Failed to create token",
 			"data":    err.Error(),
 		})
 	}
-
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
+		Path:     "/api/v1",
 		Expires:  time.Now().Add(time.Hour * 24),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User signed in successfully Signin",
+		"message": "User signed in successfully",
 		"data":    existingUser,
 	})
 }
@@ -221,13 +221,14 @@ func Signout(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    "",
+		Path:     "/api/v1",
 		Expires:  time.Now().Add(-time.Hour),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "User logged out successfully Signout",
+		"message": "User logged out successfully",
 		"data":    nil,
 	})
 }
@@ -236,15 +237,15 @@ func Signout(c *gin.Context) {
 func Profile(c *gin.Context) {
 	session := db.GetDB().Session(&gorm.Session{})
 	var user models.User
-	id, exists := c.Get("email")
+	id, exists := c.Get("id")
 	if !exists {
 		c.JSON(401, gin.H{
 			"status":  "error",
-			"message": "User not authenticated Profile",
+			"message": "User not authenticated",
 		})
 		return
 	}
-	result := session.Where("email=?", id).First(&user)
+	result := session.Where("ID=?", id).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
 	if result.Error != nil {
 		c.JSON(404, gin.H{
 			"status":  "error",
@@ -255,7 +256,7 @@ func Profile(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Successfully fetched user Profile",
+		"message": "Successfully fetched user",
 		"data":    user,
 	})
 }

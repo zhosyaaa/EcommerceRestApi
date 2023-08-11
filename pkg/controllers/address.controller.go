@@ -11,20 +11,44 @@ import (
 func UpdateAddress(c *gin.Context) {
 	session := db.GetDB().Session(&gorm.Session{})
 	userId := c.Param("id")
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
+	type UserInputCred struct {
+		ZipCode     string `json:"zipCode"`
+		City        string `json:"city"`
+		State       string `json:"state"`
+		Country     string `json:"country"`
+		Street      string `json:"street"`
+		HouseNumber string `json:"houseNumber"`
+	}
+	var addressInput UserInputCred
+	if err := c.ShouldBindJSON(&addressInput); err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
-			"message": "Invalid address data UpdateAddress",
+			"message": "Invalid address data",
 			"data":    err.Error(),
 		})
 		return
 	}
-	result := session.Model(&models.User{}).Where("id = ?", userId).Updates(map[string]interface{}{"address": user.Address})
+	var user models.User
+	result := session.Where("id = ?", userId).Preload("Address").First(&user) // Added '&' before user
 	if result.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error updating address UpdateAddress",
+			"message": "Error getting user",
+			"data":    nil,
+		})
+		return
+	}
+	user.Address.ZipCode = addressInput.ZipCode
+	user.Address.City = addressInput.City
+	user.Address.Street = addressInput.Street
+	user.Address.State = addressInput.State
+	user.Address.HouseNumber = addressInput.HouseNumber
+	user.Address.Country = addressInput.Country
+	res := session.Save(&user.Address)
+	if res.Error != nil {
+		c.JSON(500, gin.H{
+			"status":  "error",
+			"message": "Error updating address",
 			"data":    nil,
 		})
 		return
@@ -32,7 +56,7 @@ func UpdateAddress(c *gin.Context) {
 	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
-		"message": "Address updated UpdateAddress",
+		"message": "Address updated ",
 		"data":    user,
 	})
 }
