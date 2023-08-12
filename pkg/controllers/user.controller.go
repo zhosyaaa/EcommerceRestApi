@@ -275,7 +275,7 @@ func Profile(c *gin.Context) {
 		})
 		return
 	}
-	logger.Debug().Int("user_id", id.(int)).Msg("User authenticated")
+	logger.Debug().Msg("User authenticated")
 
 	result := session.Where("ID=?", id).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
 	if result.Error != nil {

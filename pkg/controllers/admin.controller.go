@@ -115,7 +115,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	var user models.User
-	res := session.Where("ID=?", id).Preload("Addresses").Preload("UserCards").Preload("Orders").First(&user)
+	res := session.Where("ID=?", id).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
 	if res.Error != nil {
 		logger.Error().Err(res.Error).Msg("Error getting user")
 		c.JSON(500, gin.H{
