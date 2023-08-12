@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// /api/v1/address/update/:id
 func UpdateAddress(c *gin.Context) {
 	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
 	logger.Debug().Msg("Received request to Update Address")

@@ -10,6 +10,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// @title           E-commerce API
+// @version         1.0
+// @description     This is e-commerce backend implemented with gin, fiber(v2), gorm and postgres. It is a simple e-commerce backend with basic features.
+
+// @contact.name   API Support
+// @contact.url    https://t.me/zhosyaaa
+// @contact.email  musabecova05@gmail.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+// @schemes  http
+
+// @securityDefinitions.basic  BasicAuth
+// @in                          header
+// @name                        Authorization
 func main() {
 	log.Info().Msg("Setting configs")
 	configs, err := config.LoadConfig()
