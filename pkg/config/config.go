@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -44,4 +45,13 @@ func LoadConfig() (Config, error) {
 	}
 
 	return config, nil
+}
+
+func GetEnvVar(name string) string {
+	if !viper.IsSet(name) {
+		log.Debug().Msgf("Environment variable %s is not set", name)
+		return ""
+	}
+	value := viper.GetString(name)
+	return value
 }

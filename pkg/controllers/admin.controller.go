@@ -96,15 +96,30 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	var user models.User
-	res := session.Where("ID=?", id).Delete(&user)
+	res := session.Where("ID=?", id).Preload("Addresses").Preload("UserCards").Preload("Orders").First(&user)
 	if res.Error != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
-			"message": "Error deleting users",
+			"message": "Error getting user",
 			"data":    nil,
 		})
 		return
 	}
+
+	session.Delete(&user.Address)
+	session.Delete(&user.UserCart)
+	session.Delete(&user.Orders)
+
+	res = session.Delete(&user)
+	if res.Error != nil {
+		c.JSON(500, gin.H{
+			"status":  "error",
+			"message": "Error deleting user",
+			"data":    nil,
+		})
+		return
+	}
+
 	if user.UserType == "ADMIN" {
 		cookie := http.Cookie{
 			Name:     "jwt",
@@ -157,6 +172,13 @@ func DeleteAllUsers(c *gin.Context) {
 		})
 		return
 	}
+
+	for _, user := range users {
+		session.Delete(&user.Address)
+		session.Delete(&user.UserCart)
+		session.Delete(&user.Orders)
+	}
+
 	deleteResult := session.Delete(&users)
 	if deleteResult.Error != nil {
 		c.JSON(500, gin.H{
@@ -166,6 +188,7 @@ func DeleteAllUsers(c *gin.Context) {
 		})
 		return
 	}
+
 	session.Commit()
 	c.JSON(200, gin.H{
 		"status":  "success",
