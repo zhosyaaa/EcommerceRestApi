@@ -4,6 +4,7 @@ import (
 	"Ecommerce/pkg/db"
 	"Ecommerce/pkg/models"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
@@ -12,10 +13,14 @@ import (
 
 // /api/v1/admin/getUser/:id
 func GetUser(c *gin.Context) {
+	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
+	logger.Debug().Msg("Received request to Get User")
+
 	session := db.GetDB().Session(&gorm.Session{})
 	id := c.Param("id")
 	ID, err := strconv.ParseInt(id, 0, 0)
 	if err != nil {
+		logger.Error().Err(err).Msg("Invalid user id")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid user id",
@@ -25,12 +30,14 @@ func GetUser(c *gin.Context) {
 	var user models.User
 	res := session.Where("ID=?", ID).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
 	if res.Error != nil {
+		logger.Error().Err(res.Error).Msg("User not found")
 		c.JSON(404, gin.H{
 			"status":  "error",
 			"message": "User not found",
 		})
 		return
 	}
+	logger.Info().Int64("user_id", int64(user.ID)).Msg("User found")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "User found",
@@ -40,9 +47,13 @@ func GetUser(c *gin.Context) {
 
 // /api/v1/admin/getUsers
 func GetUsers(c *gin.Context) {
+	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
+	logger.Debug().Msg("Received request to Remove Get Users")
+
 	session := db.GetDB().Session(&gorm.Session{})
 	userType, ok := c.Get("userType")
 	if !ok || userType != "ADMIN" {
+		logger.Warn().Msg("Only admin can get users")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -53,6 +64,7 @@ func GetUsers(c *gin.Context) {
 	var users []models.User
 	res := session.Preload("Address").Preload("UserCart").Preload("Orders").Find(&users)
 	if res.Error != nil {
+		logger.Error().Err(res.Error).Msg("Error getting users")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Error get users",
@@ -61,6 +73,7 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 	if len(users) == 0 {
+		logger.Warn().Msg("No users found")
 		c.JSON(404, gin.H{
 			"status":  "error",
 			"message": "No users found",
@@ -68,6 +81,7 @@ func GetUsers(c *gin.Context) {
 		})
 		return
 	}
+	logger.Info().Msg("Users found")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "Users found",
@@ -77,9 +91,13 @@ func GetUsers(c *gin.Context) {
 
 // /api/v1/admin/deleteUser/:id
 func DeleteUser(c *gin.Context) {
+	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
+	logger.Debug().Msg("Received request to Delete User")
+
 	session := db.GetDB().Session(&gorm.Session{})
 	userType, ok := c.Get("userType")
 	if !ok || userType != "ADMIN" {
+		logger.Warn().Msg("Only admin can delete users")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -89,6 +107,7 @@ func DeleteUser(c *gin.Context) {
 	}
 	id := c.Param("id")
 	if id == "" {
+		logger.Warn().Msg("Invalid user id")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid user id",
@@ -98,6 +117,7 @@ func DeleteUser(c *gin.Context) {
 	var user models.User
 	res := session.Where("ID=?", id).Preload("Addresses").Preload("UserCards").Preload("Orders").First(&user)
 	if res.Error != nil {
+		logger.Error().Err(res.Error).Msg("Error getting user")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Error getting user",
@@ -112,6 +132,7 @@ func DeleteUser(c *gin.Context) {
 
 	res = session.Delete(&user)
 	if res.Error != nil {
+		logger.Error().Err(res.Error).Msg("Error deleting user")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Error deleting user",
@@ -120,6 +141,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
+	session.Commit()
 	if user.UserType == "ADMIN" {
 		cookie := http.Cookie{
 			Name:     "jwt",
@@ -128,12 +150,14 @@ func DeleteUser(c *gin.Context) {
 			HttpOnly: true,
 		}
 		http.SetCookie(c.Writer, &cookie)
+		logger.Info().Msg("Admin deleted")
 		c.JSON(200, gin.H{
 			"status":  "success",
 			"message": "Admin deleted",
 			"data":    nil,
 		})
 	} else {
+		logger.Info().Msg("User deleted")
 		c.JSON(200, gin.H{
 			"status":  "success",
 			"message": "User deleted",
@@ -144,9 +168,13 @@ func DeleteUser(c *gin.Context) {
 
 // /api/v1/admin/deleteUsers
 func DeleteAllUsers(c *gin.Context) {
+	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
+	logger.Debug().Msg("Received request to Delete All Users")
+
 	session := db.GetDB().Session(&gorm.Session{})
 	userType, ok := c.Get("userType")
 	if !ok || userType != "ADMIN" {
+		logger.Warn().Msg("Only admin can delete users")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
@@ -157,6 +185,7 @@ func DeleteAllUsers(c *gin.Context) {
 	var users []models.User
 	result := session.Find(&users)
 	if result.Error != nil {
+		logger.Error().Err(result.Error).Msg("Error getting users")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Error getting users",
@@ -165,6 +194,7 @@ func DeleteAllUsers(c *gin.Context) {
 		return
 	}
 	if len(users) == 0 {
+		logger.Warn().Msg("No users found for deletion")
 		c.JSON(404, gin.H{
 			"status":  "error",
 			"message": "No users found for deletion",
@@ -181,6 +211,7 @@ func DeleteAllUsers(c *gin.Context) {
 
 	deleteResult := session.Delete(&users)
 	if deleteResult.Error != nil {
+		logger.Error().Err(deleteResult.Error).Msg("Error deleting users")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Error deleting users",
@@ -188,8 +219,8 @@ func DeleteAllUsers(c *gin.Context) {
 		})
 		return
 	}
-
 	session.Commit()
+	logger.Info().Msg("Users deleted")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "Users deleted",
