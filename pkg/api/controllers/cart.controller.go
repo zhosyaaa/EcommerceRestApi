@@ -1,26 +1,29 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/db"
 	"Ecommerce/pkg/models"
+	interfaces "Ecommerce/pkg/repository/interface"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 )
 
-// /api/v1/cart/remove/:id
-func RemoveProductFromCart(c *gin.Context) {
-	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
-	logger.Debug().Msg("Received request to Remove Product From Cart")
+type CartController struct {
+	orderService   interfaces.OrderRepository
+	productService interfaces.ProductRepository
+	userService    interfaces.UserRepository
+}
 
+func NewCartController(orderService interfaces.OrderRepository, productService interfaces.ProductRepository, userService interfaces.UserRepository) *CartController {
+	return &CartController{orderService: orderService, productService: productService, userService: userService}
+}
+
+func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	type Request struct {
 		Count int `json:"count" binding:"required"`
 	}
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logger.Error().Err(err).Msg("Invalid request body")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
@@ -30,7 +33,6 @@ func RemoveProductFromCart(c *gin.Context) {
 	}
 	productId := c.Param("id")
 	if productId == "" {
-		logger.Warn().Msg("Invalid product id")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid product id ",
@@ -40,33 +42,28 @@ func RemoveProductFromCart(c *gin.Context) {
 	}
 	userID, ok := c.Get("id")
 	if !ok {
-		logger.Warn().Msg("User ID not found")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "User ID not found ",
 		})
 		return
 	}
-	session := db.GetDB().Session(&gorm.Session{})
-	var product models.Product
-	res := session.Where("ID=?", productId).Find(&product)
-	if res.Error != nil {
-		logger.Error().Err(res.Error).Msg("Product with such an ID was not found")
+	product, err := s.productService.GetByID(productId)
+	if err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Product with such an ID was not found",
-			"data":    res.Error,
+			"data":    err,
 		})
 		return
 	}
-	var user models.User
-	result := session.Where("ID = ?", userID).Preload("UserCart").Find(&user)
-	if result.Error != nil {
-		logger.Error().Err(result.Error).Msg("User with such an ID was not found")
+	var user *models.User
+	user, err = s.userService.GetByID(userID.(string))
+	if err != nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "User with such an ID was not found",
-			"data":    result.Error,
+			"data":    err,
 		})
 		return
 	}
@@ -86,17 +83,14 @@ func RemoveProductFromCart(c *gin.Context) {
 		}
 	}
 	if !found {
-		logger.Warn().Msg("Product not found in cart")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Product not found in cart",
 		})
 		return
 	}
-	ress := session.Model(&models.Product{}).Where("id = ?", productId).Updates(product)
-	if ress.Error != nil {
-		session.Rollback()
-		logger.Error().Err(ress.Error).Msg("Error updating product")
+	err = s.productService.UpdateProduct(productId, product)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error updating product",
@@ -104,10 +98,8 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-	ress = session.Model(&models.ProductsToOrder{}).Where("id = ?", productId).Updates(PO)
-	if ress.Error != nil {
-		session.Rollback()
-		logger.Error().Err(ress.Error).Msg("Error updating ProductsToOrder")
+	err = s.orderService.UpdateProductToOrder(productId, &PO)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error updating ProductsToOrder",
@@ -115,24 +107,15 @@ func RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-
-	session.Commit()
-	logger.Info().Int("product_id", int(product.ID)).Msg("Product removed from cart successfully")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "Product removed from cart successfully",
 	})
 }
 
-// /api/v1/cart/add/:id +
-func AddProductToCart(c *gin.Context) {
-	logger := log.With().Str("request_id", c.GetString("x-request-id")).Logger()
-	logger.Debug().Msg("Received request to Remove Product From Cart")
-
-	session := db.GetDB().Session(&gorm.Session{})
+func (s *CartController) AddProductToCart(c *gin.Context) {
 	idUser, ok := c.Get("id")
 	if !ok {
-		logger.Warn().Msg("User ID not found")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User ID not found",
@@ -141,7 +124,6 @@ func AddProductToCart(c *gin.Context) {
 	}
 	idProduct := c.Param("id")
 	if idProduct == "" {
-		logger.Warn().Msg("Invalid product ID")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid product ID",
@@ -149,9 +131,8 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 
-	var product models.Product
-	if err := session.First(&product, idProduct).Error; err != nil {
-		logger.Error().Err(err).Msg("Product not found")
+	product, err := s.productService.GetByID(idProduct)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Product not found ",
@@ -160,7 +141,6 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 	if product.AvailableQuantity == 0 {
-		logger.Warn().Msg("Product is not available")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Product is not available",
@@ -168,9 +148,8 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 
-	var user models.User
-	if err := session.Preload("UserCart").First(&user, idUser).Error; err != nil {
-		logger.Error().Err(err).Msg("User with such an ID was not found")
+	user, err := s.userService.GetByID(idUser.(string))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User with such an ID was not found",
@@ -179,9 +158,8 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 
-	var productToOrder models.ProductsToOrder
+	var productToOrder *models.ProductsToOrder
 	if err := c.ShouldBindJSON(&productToOrder); err != nil {
-		logger.Error().Err(err).Msg("Invalid request body")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
@@ -190,30 +168,30 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 	if productToOrder.BuyQuantity > product.AvailableQuantity {
-		logger.Warn().Msg("Quantity must be less than product quantity")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Quantity must be less than product quantity",
 		})
 		return
 	}
+
 	var orders models.Order
 	orders.TotalPrice = float64(productToOrder.Price) * float64(productToOrder.BuyQuantity)
 	orders.AddressID = user.ID
-	orders.OrderCart = append(orders.OrderCart, productToOrder)
-	result := session.Create(&orders)
-	if result.Error != nil {
-		logger.Error().Err(result.Error).Msg("Failed to insert an order")
+	orders.OrderCart = append(orders.OrderCart, *productToOrder)
+
+	err = s.orderService.CreateOrder(&orders)
+	if err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Failed to insert a order",
-			"data":    result.Error.Error(),
+			"data":    err,
 		})
 		return
 	}
 	user.Orders = append(user.Orders, orders)
 	if len(user.UserCart) == 0 {
-		user.UserCart = append(user.UserCart, productToOrder)
+		user.UserCart = append(user.UserCart, *productToOrder)
 	} else {
 		existingIndex := -1
 		for i, item := range user.UserCart {
@@ -222,14 +200,13 @@ func AddProductToCart(c *gin.Context) {
 				break
 			}
 		}
-		updateCart(&user, product, productToOrder, existingIndex)
+		updateCart(user, *product, *productToOrder, existingIndex)
 	}
 	subtractQuantity := product.AvailableQuantity - productToOrder.BuyQuantity
 
 	product.AvailableQuantity = subtractQuantity
-	result = session.Model(&models.Product{}).Where("id = ?", product.ID).Updates(product)
-	if result.Error != nil {
-		logger.Error().Err(result.Error).Msg("Error updating product")
+	err = s.productService.UpdateProduct(strconv.Itoa(int(product.ID)), product)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error updating product",
@@ -238,9 +215,8 @@ func AddProductToCart(c *gin.Context) {
 		return
 	}
 
-	ress := session.Model(&models.User{}).Where("id = ?", user.ID).Updates(user)
-	if ress.Error != nil {
-		logger.Error().Err(ress.Error).Msg("Error updating user")
+	err = s.userService.UpdateUser(strconv.Itoa(int(user.ID)), user)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error updating user",
@@ -248,7 +224,6 @@ func AddProductToCart(c *gin.Context) {
 		})
 		return
 	}
-	logger.Info().Int("product_id", int(product.ID)).Msg("Product added to cart successfully")
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Product added to cart successfully",

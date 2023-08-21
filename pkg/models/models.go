@@ -48,3 +48,12 @@ type Address struct {
 	Street      string `json:"street,omitempty"`
 	HouseNumber string `json:"houseNumber,omitempty"`
 }
+
+type AddressInputCred struct {
+	ZipCode     string `json:"zipCode"`
+	City        string `json:"city"`
+	State       string `json:"state"`
+	Country     string `json:"country"`
+	Street      string `json:"street"`
+	HouseNumber string `json:"houseNumber"`
+}

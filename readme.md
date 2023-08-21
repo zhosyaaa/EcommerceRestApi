@@ -11,7 +11,6 @@ This is e-commerce backend implemented with gin, fiber(v2),gorm and PostgresSQL.
 - [x] User orders
 - [x] Product CRUD
 - [x] Admin routes
-- [x] Logger middleware
 - [x] CORS
 - [x] HTTPS
 

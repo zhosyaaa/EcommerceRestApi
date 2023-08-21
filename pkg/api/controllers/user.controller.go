@@ -2,27 +2,28 @@ package controllers
 
 import (
 	"Ecommerce/pkg/config"
-	"Ecommerce/pkg/db"
 	"Ecommerce/pkg/models"
+	interfaces "Ecommerce/pkg/repository/interface"
 	"Ecommerce/pkg/utils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-// /     /api/v1/users/auth/singup +
-func Signup(c *gin.Context) {
-	session := db.GetDB().Session(&gorm.Session{})
-	validate := validator.New()
-	request_id := c.GetString("x-request-id")
-	logger := log.With().Str("request_id", request_id).Logger()
-	logger.Debug().Msg("Received signup request")
+type UserController struct {
+	userService interfaces.UserRepository
+}
 
+func NewUserController(userService interfaces.UserRepository) *UserController {
+	return &UserController{userService: userService}
+}
+
+func (s *UserController) Signup(c *gin.Context) {
+	validate := validator.New()
 	type UserInputCred struct {
 		Username string `json:"username" validate:"required"`
 		Email    string `json:"email" validate:"required,email"`
@@ -43,7 +44,6 @@ func Signup(c *gin.Context) {
 
 	var userBind UserInputCred
 	if err := c.ShouldBindJSON(&userBind); err != nil {
-		logger.Error().Err(err).Msg("Error occurred while binding request data")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid user data for model binding",
@@ -68,32 +68,17 @@ func Signup(c *gin.Context) {
 	} else {
 		user.UserType = "USER"
 	}
-	if user.UserType == "ADMIN" {
-		var existingAdmin models.User
-		result := session.Where("user_type = ?", "ADMIN").First(&existingAdmin)
-		if result.Error == nil {
-			c.JSON(400, gin.H{
-				"status":  "error",
-				"message": "Admin user already exists",
-				"data":    result.Error,
-			})
-		}
-	}
-
-	var existingUser models.User
-	result := session.Where("email = ?", user.Email).First(&existingUser)
-	if result.Error == nil {
+	_, err := s.userService.GetByID(strconv.Itoa(int(user.ID)))
+	if err == nil {
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "User already exists",
-			"data":    result,
 		})
 		return
 	}
 
 	hashedPassword, err := utils.HashPassword(user.Password)
 	if err != nil {
-		logger.Error().Err(err).Msg("Error occurred while hashing password")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Failed to hash the password",
@@ -103,19 +88,16 @@ func Signup(c *gin.Context) {
 	}
 	user.Password = hashedPassword
 
-	log.Info().Msg("Creating user")
-	result = session.Create(&user)
-	if result.Error != nil {
+	err = s.userService.CreateUser(&user)
+	if err != nil {
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Failed to insert a user",
-			"data":    result.Error.Error(),
+			"data":    err,
 		})
 		return
 	}
-	session.Commit()
 
-	log.Info().Msg("Creating signed token")
 	signedToken, err := utils.CreateToken(strconv.Itoa(int(user.ID)), user.Email, user.UserType)
 	if err != nil {
 		c.JSON(500, gin.H{
@@ -126,7 +108,6 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	log.Info().Msg("Setting JWT cookie")
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
@@ -135,8 +116,6 @@ func Signup(c *gin.Context) {
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
-
-	log.Info().Str("request_id", request_id).Msg("Response sent")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "User signed up successfully",
@@ -144,13 +123,8 @@ func Signup(c *gin.Context) {
 	})
 }
 
-// /api/v1/users/auth/singin +
-func Signin(c *gin.Context) {
-	session := db.GetDB().Session(&gorm.Session{})
+func (s *UserController) Signin(c *gin.Context) {
 	validate := validator.New()
-	request_id := c.GetString("x-request-id")
-	logger := log.With().Str("request_id", request_id).Logger()
-	logger.Debug().Msg("Received signin request")
 
 	type SigninRequest struct {
 		Username string `json:"username" validate:"required"`
@@ -159,7 +133,6 @@ func Signin(c *gin.Context) {
 	}
 	var req SigninRequest
 	if err := c.BindJSON(&req); err != nil {
-		logger.Error().Err(err).Msg("Error occurred while binding request data")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
@@ -168,7 +141,6 @@ func Signin(c *gin.Context) {
 		return
 	}
 	if err := validate.Struct(&req); err != nil {
-		logger.Error().Err(err).Msg("Invalid request body")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
@@ -179,17 +151,14 @@ func Signin(c *gin.Context) {
 	password := req.Password
 	email := req.Email
 
-	var existingUser models.User
-	result := session.Where("email = ?", email).Preload("Address").Preload("UserCart").Preload("Orders").First(&existingUser)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			logger.Error().Err(result.Error).Msg("User does not exist")
+	existingUser, err := s.userService.GetByEmail(email)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{
 				"status":  "error",
 				"message": "User does not exist",
 			})
 		} else {
-			logger.Error().Err(result.Error).Msg("Internal server error")
 			c.JSON(500, gin.H{
 				"status":  "error",
 				"message": "Internal server error",
@@ -198,26 +167,20 @@ func Signin(c *gin.Context) {
 		return
 	}
 	if !utils.VerifyPassword(password, existingUser.Password) {
-		logger.Warn().Msg("Invalid credentials")
 		c.JSON(400, gin.H{
 			"status":  "error",
 			"message": "Invalid credentials",
 		})
 		return
 	}
-
-	logger.Info().Msg("Creating signed token")
 	signedToken, err := utils.CreateToken(strconv.Itoa(int(existingUser.ID)), existingUser.Email, existingUser.UserType)
 	if err != nil {
-		log.Error().Err(err).Str("request_id", request_id).Msg("Failed to create token")
 		c.JSON(500, gin.H{
 			"status":  "error",
 			"message": "Failed to create token",
 			"data":    err.Error(),
 		})
 	}
-
-	log.Info().Msg("Setting JWT cookie")
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
@@ -227,7 +190,6 @@ func Signin(c *gin.Context) {
 	}
 	http.SetCookie(c.Writer, &cookie)
 
-	log.Info().Msg("Response sent")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "User signed in successfully",
@@ -235,12 +197,7 @@ func Signin(c *gin.Context) {
 	})
 }
 
-// /api/v1/users/auth/singout
-func Signout(c *gin.Context) {
-	request_id := c.GetString("x-request-id")
-	logger := log.With().Str("request_id", request_id).Logger()
-	logger.Debug().Msg("Received signout request")
-
+func (s *UserController) Signout(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    "",
@@ -249,8 +206,6 @@ func Signout(c *gin.Context) {
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
-
-	log.Info().Msg("User logged out successfully")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "User logged out successfully",
@@ -259,35 +214,25 @@ func Signout(c *gin.Context) {
 }
 
 // /api/v1/users/auth/profile
-func Profile(c *gin.Context) {
-	session := db.GetDB().Session(&gorm.Session{})
-	request_id := c.GetString("x-request-id")
-	logger := log.With().Str("request_id", request_id).Logger()
-	logger.Debug().Msg("Received profile request")
-
-	var user models.User
+func (s *UserController) Profile(c *gin.Context) {
 	id, exists := c.Get("id")
 	if !exists {
-		logger.Warn().Msg("User not authenticated")
 		c.JSON(401, gin.H{
 			"status":  "error",
 			"message": "User not authenticated",
 		})
 		return
 	}
-	logger.Debug().Msg("User authenticated")
 
-	result := session.Where("ID=?", id).Preload("Address").Preload("UserCart").Preload("Orders").First(&user)
-	if result.Error != nil {
-		logger.Error().Err(result.Error).Msg("Failed to find user")
+	user, err := s.userService.GetByID(id.(string))
+	if err != nil {
 		c.JSON(404, gin.H{
 			"status":  "error",
 			"message": "user does not exist",
-			"data":    result.Error,
+			"data":    err,
 		})
 		return
 	}
-	logger.Info().Int("user_id", int(user.ID)).Msg("User successfully found")
 	c.JSON(200, gin.H{
 		"status":  "success",
 		"message": "User successfully found",
