@@ -1,17 +1,18 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
+	_interface2 "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/db/models"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 type AddressController struct {
-	addressService interfaces.AddressRepository
-	userService    interfaces.UserRepository
+	addressService _interface2.AddressRepository
+	userService    _interface2.UserRepository
 }
 
-func NewAddressController(addressService interfaces.AddressRepository, userService interfaces.UserRepository) *AddressController {
+func NewAddressController(addressService _interface2.AddressRepository, userService _interface2.UserRepository) *AddressController {
 	return &AddressController{addressService: addressService, userService: userService}
 }
 
@@ -19,7 +20,7 @@ func (s *AddressController) UpdateAddress(c *gin.Context) {
 	userId := c.Param("id")
 	var addressInput models.AddressInputCred
 	if err := c.ShouldBindJSON(&addressInput); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid address data",
 			"data":    err.Error(),
@@ -28,7 +29,7 @@ func (s *AddressController) UpdateAddress(c *gin.Context) {
 	}
 	user, err := s.userService.GetByID(userId)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error getting user",
 			"data":    nil,
@@ -43,14 +44,14 @@ func (s *AddressController) UpdateAddress(c *gin.Context) {
 	user.Address.Country = addressInput.Country
 	err = s.addressService.UpdateAddress(&user.Address)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error updating address",
 			"data":    nil,
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Address updated ",
 		"data":    user,

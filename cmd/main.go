@@ -1,22 +1,22 @@
 package main
 
 import (
-	controllers2 "Ecommerce/pkg/api/controllers"
-	middleware2 "Ecommerce/pkg/api/middleware"
-	"Ecommerce/pkg/api/routes"
-	"Ecommerce/pkg/config"
-	"Ecommerce/pkg/db"
-	"Ecommerce/pkg/repository"
-	interfaces "Ecommerce/pkg/repository/interface"
+	controllers2 "Ecommerce/internal/app/controllers"
+	middleware2 "Ecommerce/internal/app/middleware"
+	"Ecommerce/internal/app/routes"
+	"Ecommerce/internal/app/service"
+	_interface2 "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/config"
+	"Ecommerce/internal/pkg/db"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
-var userRepository interfaces.UserRepository
-var productRepository interfaces.ProductRepository
-var orderRepository interfaces.OrderRepository
-var addressRepository interfaces.AddressRepository
+var userRepository _interface2.UserRepository
+var productRepository _interface2.ProductRepository
+var orderRepository _interface2.OrderRepository
+var addressRepository _interface2.AddressRepository
 
 var adminController controllers2.AdminController
 var cartController controllers2.CartController
@@ -36,10 +36,10 @@ func main() {
 	_ = app.SetTrustedProxies(nil)
 	app.Use(middleware2.CORSMiddleware())
 
-	userRepository = repository.NewUserRepository(db.GetDB())
-	productRepository = repository.NewProductRepository(db.GetDB())
-	orderRepository = repository.NewOrderRepository(db.GetDB())
-	addressRepository = repository.NewAddressDatabase(db.GetDB())
+	userRepository = service.NewUserRepository(db.GetDB())
+	productRepository = service.NewProductRepository(db.GetDB())
+	orderRepository = service.NewOrderRepository(db.GetDB())
+	addressRepository = service.NewAddressDatabase(db.GetDB())
 
 	adminController := controllers2.NewAdminController(userRepository)
 	cartController := controllers2.NewCartController(orderRepository, productRepository, userRepository)

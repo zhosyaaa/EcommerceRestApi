@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"Ecommerce/pkg/utils"
+	"Ecommerce/internal/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"

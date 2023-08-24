@@ -1,20 +1,21 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
+	_interface2 "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/db/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"net/http"
 	"strconv"
 )
 
 type OrderController struct {
-	orderService   interfaces.OrderRepository
-	productService interfaces.ProductRepository
-	userService    interfaces.UserRepository
+	orderService   _interface2.OrderRepository
+	productService _interface2.ProductRepository
+	userService    _interface2.UserRepository
 }
 
-func NewOrderController(orderService interfaces.OrderRepository, productService interfaces.ProductRepository, userService interfaces.UserRepository) *OrderController {
+func NewOrderController(orderService _interface2.OrderRepository, productService _interface2.ProductRepository, userService _interface2.UserRepository) *OrderController {
 	return &OrderController{orderService: orderService, productService: productService, userService: userService}
 }
 
@@ -23,12 +24,12 @@ func (s *OrderController) OrderAll(c *gin.Context) {
 	user, err := s.userService.GetByID(userID.(string))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{
+			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
 				"message": "User does not exist",
 			})
 		} else {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"status":  "error",
 				"message": "Internal server error ",
 			})
@@ -38,13 +39,13 @@ func (s *OrderController) OrderAll(c *gin.Context) {
 
 	userCart := user.UserCart
 	if len(userCart) == 0 {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "User cart is empty",
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User cart retrieved successfully",
 		"data":    userCart,
@@ -56,12 +57,12 @@ func (s *OrderController) OrderOne(c *gin.Context) {
 	user, err := s.userService.GetByID(userID.(string))
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{
+			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
 				"message": "User does not exist",
 			})
 		} else {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"status":  "error",
 				"message": "Internal server error",
 			})
@@ -80,7 +81,7 @@ func (s *OrderController) OrderOne(c *gin.Context) {
 		}
 	}
 	if productToOrder.ID == 0 {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "Order does not exist",
 		})
@@ -91,7 +92,7 @@ func (s *OrderController) OrderOne(c *gin.Context) {
 	user.UserCart = usercart
 	err = s.userService.UpdateUser(id, user)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to update user's cart",
 			"data":    err,
@@ -101,14 +102,14 @@ func (s *OrderController) OrderOne(c *gin.Context) {
 
 	err = s.orderService.DeleteProductToOrder(&productToOrder)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to deleted productToOrder",
 			"data":    err,
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Order removed from cart successfully ",
 	})

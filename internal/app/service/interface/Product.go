@@ -1,6 +1,8 @@
 package _interface
 
-import "Ecommerce/pkg/models"
+import (
+	"Ecommerce/internal/pkg/db/models"
+)
 
 type ProductRepository interface {
 	CreateProduct(product *models.Product) error

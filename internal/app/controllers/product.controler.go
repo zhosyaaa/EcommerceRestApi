@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
+	interfaces "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/db/models"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -22,7 +22,7 @@ func NewProductController(productService interfaces.ProductRepository) *ProductC
 func (s *ProductController) CreateProduct(c *gin.Context) {
 	userType, ok := c.Get("userType")
 	if !ok || userType != "ADMIN" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Only admin can get users",
 			"data":    nil,
@@ -31,7 +31,7 @@ func (s *ProductController) CreateProduct(c *gin.Context) {
 	}
 	var product models.Product
 	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid product data",
 			"data":    err.Error(),
@@ -40,14 +40,14 @@ func (s *ProductController) CreateProduct(c *gin.Context) {
 	}
 	err := s.productService.CreateProduct(&product)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Error creating product",
 			"data":    nil,
 		})
 		return
 	}
-	c.JSON(201, gin.H{
+	c.JSON(http.StatusCreated, gin.H{
 		"status":  "success",
 		"message": "Product created",
 		"data":    product,
@@ -74,7 +74,7 @@ func (s *ProductController) GetAllProducts(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Products found",
 		"data":    products,
@@ -141,7 +141,6 @@ func (s *ProductController) UpdateProduct(c *gin.Context) {
 		})
 		return
 	}
-	//result := session.Model(&models.Product{}).Where("id = ?", id).Updates(product)
 	err := s.productService.UpdateProduct(id, &product)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -175,7 +174,7 @@ func (s *ProductController) DeleteProduct(c *gin.Context) {
 		})
 		return
 	}
-	//err := session.Where("ID = ?", id).First(&product)
+
 	err := s.productService.DeleteProduct(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -184,7 +183,7 @@ func (s *ProductController) DeleteProduct(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Product deleted successfully",
 	})

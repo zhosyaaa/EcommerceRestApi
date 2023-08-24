@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/config"
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
-	"Ecommerce/pkg/utils"
+	interfaces "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/config"
+	"Ecommerce/internal/pkg/db/models"
+	utils2 "Ecommerce/internal/pkg/utils"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -44,7 +44,7 @@ func (s *UserController) Signup(c *gin.Context) {
 
 	var userBind UserInputCred
 	if err := c.ShouldBindJSON(&userBind); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid user data for model binding",
 			"data":    err.Error(),
@@ -52,7 +52,7 @@ func (s *UserController) Signup(c *gin.Context) {
 		return
 	}
 	if err := validate.Struct(&userBind); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
 			"err":     err.Error(),
@@ -70,16 +70,16 @@ func (s *UserController) Signup(c *gin.Context) {
 	}
 	_, err := s.userService.GetByID(strconv.Itoa(int(user.ID)))
 	if err == nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User already exists",
 		})
 		return
 	}
 
-	hashedPassword, err := utils.HashPassword(user.Password)
+	hashedPassword, err := utils2.HashPassword(user.Password)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to hash the password",
 			"data":    err.Error(),
@@ -90,7 +90,7 @@ func (s *UserController) Signup(c *gin.Context) {
 
 	err = s.userService.CreateUser(&user)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to insert a user",
 			"data":    err,
@@ -98,9 +98,9 @@ func (s *UserController) Signup(c *gin.Context) {
 		return
 	}
 
-	signedToken, err := utils.CreateToken(strconv.Itoa(int(user.ID)), user.Email, user.UserType)
+	signedToken, err := utils2.CreateToken(strconv.Itoa(int(user.ID)), user.Email, user.UserType)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to create token ",
 			"data":    err.Error(),
@@ -111,12 +111,12 @@ func (s *UserController) Signup(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
-		Path:     "/api/v1",
+		Path:     "/app/v1",
 		Expires:  time.Now().Add(time.Hour * 24),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User signed up successfully",
 		"data":    signedToken,
@@ -133,7 +133,7 @@ func (s *UserController) Signin(c *gin.Context) {
 	}
 	var req SigninRequest
 	if err := c.BindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
 			"data":    err.Error(),
@@ -141,7 +141,7 @@ func (s *UserController) Signin(c *gin.Context) {
 		return
 	}
 	if err := validate.Struct(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
 			"err":     err.Error(),
@@ -154,28 +154,28 @@ func (s *UserController) Signin(c *gin.Context) {
 	existingUser, err := s.userService.GetByEmail(email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{
+			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
 				"message": "User does not exist",
 			})
 		} else {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"status":  "error",
 				"message": "Internal server error",
 			})
 		}
 		return
 	}
-	if !utils.VerifyPassword(password, existingUser.Password) {
-		c.JSON(400, gin.H{
+	if !utils2.VerifyPassword(password, existingUser.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid credentials",
 		})
 		return
 	}
-	signedToken, err := utils.CreateToken(strconv.Itoa(int(existingUser.ID)), existingUser.Email, existingUser.UserType)
+	signedToken, err := utils2.CreateToken(strconv.Itoa(int(existingUser.ID)), existingUser.Email, existingUser.UserType)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to create token",
 			"data":    err.Error(),
@@ -184,13 +184,13 @@ func (s *UserController) Signin(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    signedToken,
-		Path:     "/api/v1",
+		Path:     "/app/v1",
 		Expires:  time.Now().Add(time.Hour * 24),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User signed in successfully",
 		"data":    existingUser,
@@ -201,23 +201,23 @@ func (s *UserController) Signout(c *gin.Context) {
 	cookie := http.Cookie{
 		Name:     "jwt",
 		Value:    "",
-		Path:     "/api/v1",
+		Path:     "/app/v1",
 		Expires:  time.Now().Add(-time.Hour),
 		HttpOnly: true,
 	}
 	http.SetCookie(c.Writer, &cookie)
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User logged out successfully",
 		"data":    nil,
 	})
 }
 
-// /api/v1/users/auth/profile
+// /app/v1/users/auth/profile
 func (s *UserController) Profile(c *gin.Context) {
 	id, exists := c.Get("id")
 	if !exists {
-		c.JSON(401, gin.H{
+		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
 			"message": "User not authenticated",
 		})
@@ -226,14 +226,14 @@ func (s *UserController) Profile(c *gin.Context) {
 
 	user, err := s.userService.GetByID(id.(string))
 	if err != nil {
-		c.JSON(404, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "user does not exist",
 			"data":    err,
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "User successfully found",
 		"data":    user,

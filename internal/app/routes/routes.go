@@ -1,8 +1,8 @@
 package routes
 
 import (
-	controllers2 "Ecommerce/pkg/api/controllers"
-	middlewares "Ecommerce/pkg/api/middleware"
+	controllers2 "Ecommerce/internal/app/controllers"
+	middlewares "Ecommerce/internal/app/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,7 +20,7 @@ func NewRoutes(adminController controllers2.AdminController, cartController cont
 }
 
 func (r *Routes) SetupRoutes(app *gin.Engine) *gin.Engine {
-	api := app.Group("api/v1")
+	api := app.Group("app/v1")
 
 	//auth routes
 	userApi := api.Group("/users/auth")

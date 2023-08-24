@@ -1,8 +1,8 @@
 package db
 
 import (
-	"Ecommerce/pkg/config"
-	"Ecommerce/pkg/models"
+	"Ecommerce/internal/pkg/config"
+	"Ecommerce/internal/pkg/db/models"
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

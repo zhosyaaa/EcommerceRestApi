@@ -1,8 +1,8 @@
-package repository
+package service
 
 import (
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
+	interfaces "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/db/models"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"

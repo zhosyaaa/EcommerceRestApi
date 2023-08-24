@@ -1,20 +1,20 @@
 package controllers
 
 import (
-	"Ecommerce/pkg/models"
-	interfaces "Ecommerce/pkg/repository/interface"
+	_interface2 "Ecommerce/internal/app/service/interface"
+	"Ecommerce/internal/pkg/db/models"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
 type CartController struct {
-	orderService   interfaces.OrderRepository
-	productService interfaces.ProductRepository
-	userService    interfaces.UserRepository
+	orderService   _interface2.OrderRepository
+	productService _interface2.ProductRepository
+	userService    _interface2.UserRepository
 }
 
-func NewCartController(orderService interfaces.OrderRepository, productService interfaces.ProductRepository, userService interfaces.UserRepository) *CartController {
+func NewCartController(orderService _interface2.OrderRepository, productService _interface2.ProductRepository, userService _interface2.UserRepository) *CartController {
 	return &CartController{orderService: orderService, productService: productService, userService: userService}
 }
 
@@ -24,7 +24,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	}
 	var req Request
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid request body",
 			"data":    err,
@@ -33,7 +33,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	}
 	productId := c.Param("id")
 	if productId == "" {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "Invalid product id ",
 			"data":    nil,
@@ -42,7 +42,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	}
 	userID, ok := c.Get("id")
 	if !ok {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
 			"message": "User ID not found ",
 		})
@@ -50,7 +50,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	}
 	product, err := s.productService.GetByID(productId)
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "Product with such an ID was not found",
 			"data":    err,
@@ -60,7 +60,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 	var user *models.User
 	user, err = s.userService.GetByID(userID.(string))
 	if err != nil {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "User with such an ID was not found",
 			"data":    err,
@@ -83,7 +83,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 		}
 	}
 	if !found {
-		c.JSON(400, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"status":  "error",
 			"message": "Product not found in cart",
 		})
@@ -107,7 +107,7 @@ func (s *CartController) RemoveProductFromCart(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Product removed from cart successfully",
 	})
@@ -182,7 +182,7 @@ func (s *CartController) AddProductToCart(c *gin.Context) {
 
 	err = s.orderService.CreateOrder(&orders)
 	if err != nil {
-		c.JSON(500, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to insert a order",
 			"data":    err,
